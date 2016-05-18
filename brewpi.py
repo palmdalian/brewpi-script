@@ -627,9 +627,9 @@ while run:
                 printStdErr(error)
             else:
                 conn.send("Profile successfully updated")
-                if cs['mode'] is not 'p':
-                    cs['mode'] = 'p'
-                    bg_ser.write("j{mode:p}")
+                if cs['mode'] is not 'f':
+                    cs['mode'] = 'f'
+                    bg_ser.write("j{mode:f}")
                     logMessage("Notification: Profile mode enabled")
                     raise socket.timeout  # go to serial communication to update controller
         elif messageType == "programController" or messageType == "programArduino":
@@ -786,6 +786,14 @@ while run:
                         # lcd content received
                         prevLcdUpdate = time.time()
                         lcdText = json.loads(line[2:])
+                        # Replacing the correct mode with faked info
+                        if lcdText[0] == "Mode   Fridge Const.":
+                            lcdText[0] = "Mode   Profile Mode"
+                            if  lcdText[1].startswith('Beer   --.-  --.-'):  
+                                old = lcdText[2]
+                                new = old.replace('Fridge', 'Beer  ')
+                                lcdText[1] = new
+                                lcdText[2] = "\n"
                     elif line[0] == 'C':
                         # Control constants received
                         cc = json.loads(line[2:])
@@ -826,12 +834,12 @@ while run:
                     logMessage("Error while expanding log message '" + message + "'" + str(e))
 
         # Check for update from temperature profile
-        if cs['mode'] == 'p':
+        if cs['mode'] == 'f':
             newTemp = temperatureProfile.getNewTemp(util.scriptPath())
-            if newTemp != cs['beerSet']:
-                cs['beerSet'] = newTemp
+            if newTemp != cs['fridgeSet']:
+                cs['fridgeSet'] = newTemp
                 # if temperature has to be updated send settings to controller
-                bg_ser.write("j{beerSet:" + json.dumps(cs['beerSet']) + "}")
+                bg_ser.write("j{fridgeSet:" + json.dumps(cs['fridgeSet']) + "}")
 
     except socket.error as e:
         logMessage("Socket error(%d): %s" % (e.errno, e.strerror))
